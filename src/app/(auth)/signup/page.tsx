@@ -5,11 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { Input } from "@/components/app/Input";
 import { Button } from "@/components/app/Button";
+import { friendlyAuthError, safeInvite } from "@/lib/safe-next";
 
 function SignupForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const invite = params.get("invite");
+  const invite = safeInvite(params.get("invite"));
   const agents = params.get("plan") === "agents";
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -31,7 +32,7 @@ function SignupForm() {
       },
     });
     if (error) {
-      setError(error.message);
+      setError(friendlyAuthError(error.message));
       setBusy(false);
       return;
     }
