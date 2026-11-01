@@ -1,18 +1,12 @@
 import { notFound } from "next/navigation";
-import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/admin";
 import { PageHeader } from "@/components/app/PageHeader";
 import { Card } from "@/components/app/Card";
 import { btnGhost, fmtDate } from "@/components/cubits/util";
 import { markRead } from "./actions";
 
 export const dynamic = "force-dynamic";
-
-/** Site-owner inbox. Only emails listed in ADMIN_EMAILS can open it; everyone else gets a 404. */
-export async function isAdmin() {
-  const { data: { user } } = await (await supabaseServer()).auth.getUser();
-  const allowed = (process.env.ADMIN_EMAILS ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-  return !!user?.email && allowed.includes(user.email.toLowerCase());
-}
 
 export default async function MessagesPage() {
   if (!(await isAdmin())) notFound();
