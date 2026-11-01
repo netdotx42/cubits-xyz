@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { ShareBar } from "./ShareBar";
+import { HOOK } from "@/lib/share";
 
 const cols = [
   { title: "Product", items: [["Cubits", "/cubits"], ["Pricing", "/pricing"], ["Start free trial", "/signup"], ["Log in", "/login"]] },
@@ -30,6 +32,12 @@ export function Footer() {
             </ul>
           </div>
         ))}
+      </div>
+      <div className="border-t border-line">
+        <div className="mx-auto grid max-w-6xl items-center gap-6 px-4 py-10 sm:px-6 md:grid-cols-2">
+          <p className="max-w-md text-lg font-semibold leading-snug tracking-tight">{HOOK}</p>
+          <ShareBar />
+        </div>
       </div>
       <div className="border-t border-line">
         <div className="mx-auto max-w-6xl px-4 py-6 font-mono text-[11px] uppercase tracking-widest text-mute sm:px-6">
