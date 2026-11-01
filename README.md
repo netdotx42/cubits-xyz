@@ -11,6 +11,7 @@ Stack: Next.js 15 (App Router) · Tailwind 3 · Supabase (auth + Postgres + RLS)
 2. Create a Supabase project and run `supabase/schema.sql` in the SQL editor.
 3. Copy `.env.example` to `.env.local` and fill in every value.
 4. In Stripe, create a Product with a recurring **$29 / month** Price and set `STRIPE_PRICE_ID`.
+   (Live account: product `prod_VXzdvoBKoaKSor`, price `price_1UWteY17sTkAsp8v9gmwj9we`. Price IDs are not secret.)
    (Optional: a second yearly Price of $290.)
 5. Add a webhook endpoint at `{APP_URL}/api/stripe/webhook` with these events:
    `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`,
