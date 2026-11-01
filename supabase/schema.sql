@@ -113,15 +113,31 @@ alter table automations enable row level security;
 alter table automation_runs enable row level security;
 
 create policy "ws read" on workspaces for select using (is_member(id));
-create policy "ws update owner" on workspaces for update using (owner_id = auth.uid());
 create policy "members read" on members for select using (is_member(workspace_id));
 create policy "invites read" on invites for select using (is_member(workspace_id));
-create policy "invites write" on invites for all using (is_member(workspace_id)) with check (is_member(workspace_id));
 create policy "invoices all" on invoices for all using (is_member(workspace_id)) with check (is_member(workspace_id));
 create policy "forms all" on forms for all using (is_member(workspace_id)) with check (is_member(workspace_id));
 create policy "submissions read" on submissions for select using (is_member(workspace_id));
 create policy "automations all" on automations for all using (is_member(workspace_id)) with check (is_member(workspace_id));
 create policy "runs read" on automation_runs for select using (is_member(workspace_id));
+
+-- Workspaces, members and invites are only ever written server-side with the service role.
+-- No user-level write policies exist, so owners cannot edit plan_status, trial_end or seats directly.
+revoke insert, update, delete on workspaces from anon, authenticated;
+revoke insert, update, delete on members from anon, authenticated;
+revoke insert, update, delete on invites from anon, authenticated;
+
+-- Covering indexes for foreign keys used in joins and RLS checks.
+create index if not exists idx_members_user on members(user_id);
+create index if not exists idx_workspaces_owner on workspaces(owner_id);
+create index if not exists idx_invites_workspace on invites(workspace_id);
+create index if not exists idx_invoices_workspace on invoices(workspace_id, created_at desc);
+create index if not exists idx_forms_workspace on forms(workspace_id);
+create index if not exists idx_submissions_form on submissions(form_id, created_at desc);
+create index if not exists idx_submissions_workspace on submissions(workspace_id);
+create index if not exists idx_automations_workspace on automations(workspace_id);
+create index if not exists idx_runs_automation on automation_runs(automation_id);
+create index if not exists idx_runs_workspace on automation_runs(workspace_id, created_at desc);
 
 -- Writes to workspaces (create), members (insert), submissions (public form posts),
 -- automation_runs and Stripe fields are done server-side with the service role key.
