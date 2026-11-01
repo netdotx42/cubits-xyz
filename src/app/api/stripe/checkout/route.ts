@@ -5,10 +5,19 @@ import { stripe, APP_URL } from "@/lib/stripe";
 
 export const runtime = "nodejs";
 
-export async function POST() {
+export async function POST(req: Request) {
   const { workspace, role, email } = await requireWorkspace({ allowUnpaid: true });
   if (role !== "owner") return NextResponse.json({ error: "Only the owner can manage billing." }, { status: 403 });
-  if (!process.env.STRIPE_PRICE_ID) return NextResponse.json({ error: "Billing is not configured." }, { status: 500 });
+
+  let interval = "monthly";
+  try {
+    const form = await req.formData();
+    if (form.get("interval") === "annual") interval = "annual";
+  } catch {
+    /* no form body: default to monthly */
+  }
+  const priceId = interval === "annual" ? process.env.STRIPE_PRICE_ID_ANNUAL : process.env.STRIPE_PRICE_ID;
+  if (!priceId) return NextResponse.json({ error: "Billing is not configured." }, { status: 500 });
 
   const admin = supabaseAdmin();
   const { data: row } = await admin.from("workspaces").select("stripe_customer_id").eq("id", workspace.id).single();
@@ -27,9 +36,9 @@ export async function POST() {
   const session = await stripe().checkout.sessions.create({
     mode: "subscription",
     customer: customerId,
-    line_items: [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }],
+    line_items: [{ price: priceId, quantity: 1 }],
     payment_method_collection: "always",
-    subscription_data: { trial_period_days: 7, metadata: { workspace_id: workspace.id } },
+    subscription_data: { trial_period_days: 7, metadata: { workspace_id: workspace.id, interval } },
     client_reference_id: workspace.id,
     metadata: { workspace_id: workspace.id },
     success_url: `${APP_URL()}/app?welcome=1`,
