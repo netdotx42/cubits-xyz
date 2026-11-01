@@ -99,6 +99,10 @@ language sql security definer set search_path = public as $$
   select exists (select 1 from members where workspace_id = ws and user_id = auth.uid());
 $$;
 
+-- Signed-in users need EXECUTE for RLS policies; anonymous callers do not.
+revoke execute on function is_member(uuid) from public, anon;
+grant execute on function is_member(uuid) to authenticated, service_role;
+
 alter table workspaces enable row level security;
 alter table members enable row level security;
 alter table invites enable row level security;
