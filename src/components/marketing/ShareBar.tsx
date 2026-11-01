@@ -12,13 +12,6 @@ function XIcon() {
     </svg>
   );
 }
-function LinkedInIcon() {
-  return (
-    <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4 fill-current">
-      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-    </svg>
-  );
-}
 function ThreadsIcon() {
   return (
     <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4 fill-current">
@@ -47,16 +40,6 @@ export function ShareBar() {
   function shareX() {
     open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(SHARE_TEXT.x)}&url=${encodeURIComponent(siteUrl())}`);
   }
-  async function shareLinkedIn() {
-    // LinkedIn no longer reliably honours prefilled text from a link, so copy the post first
-    // and also pass it to the composer. If the box opens empty, the text is already on the clipboard.
-    const text = `${SHARE_TEXT.linkedin}
-
-${siteUrl()}`;
-    const ok = await copy(text);
-    open(`https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(text)}`);
-    flash(ok ? "Post text copied. If the LinkedIn box is empty, paste it (Ctrl/Cmd+V)." : "If the LinkedIn box is empty, copy the text from the card caption below.");
-  }
   function shareThreads() {
     open(`https://www.threads.net/intent/post?text=${encodeURIComponent(`${SHARE_TEXT.threads}\n\n${siteUrl()}`)}`);
   }
@@ -65,13 +48,12 @@ ${siteUrl()}`;
       <div className="font-mono text-[11px] uppercase tracking-widest text-mute">Share Cubits</div>
       <div className="mt-3 flex flex-wrap gap-2">
         <button type="button" onClick={shareX} className={btn}><XIcon /> Post on X</button>
-        <button type="button" onClick={shareLinkedIn} className={btn}><LinkedInIcon /> Share on LinkedIn</button>
         <button type="button" onClick={shareThreads} className={btn}><ThreadsIcon /> Post on Threads</button>
       </div>
       <div className="mt-3 flex flex-wrap gap-x-4 text-xs text-mute">
-        {(["x", "linkedin", "threads"] as SharePlatform[]).map((p) => (
+        {(["x", "threads"] as SharePlatform[]).map((p) => (
           <a key={p} href={`/api/share/${p}`} download={`cubits-${p}.png`} className="inline-flex min-h-[32px] items-center underline-offset-4 hover:text-glow-soft hover:underline">
-            {p === "x" ? "X card" : p === "linkedin" ? "LinkedIn card" : "Threads card"}
+            {p === "x" ? "X card" : "Threads card"}
           </a>
         ))}
       </div>

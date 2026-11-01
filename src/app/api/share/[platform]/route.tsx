@@ -7,7 +7,7 @@ export function generateStaticParams() {
 }
 
 const GLOW = "#7dd3fc";
-const LABEL: Record<SharePlatform, string> = { x: "X", linkedin: "LinkedIn", threads: "Threads" };
+const LABEL: Record<SharePlatform, string> = { x: "X", threads: "Threads" };
 
 export async function GET(_req: Request, { params }: { params: Promise<{ platform: string }> }) {
   const { platform } = await params;

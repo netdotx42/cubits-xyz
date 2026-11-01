@@ -1,18 +1,16 @@
-export type SharePlatform = "x" | "linkedin" | "threads";
+export type SharePlatform = "x" | "threads";
 
 export const HOOK = "Invoices in one tab. Leads in another. Follow-ups in your head.";
 export const SUB = "One workspace for all three. $29 a month, flat.";
 
 export const SHARE_TEXT: Record<SharePlatform, string> = {
   x: `${HOOK}\n\nCubits runs all three from one workspace. $29/mo flat, 7-day free trial.`,
-  linkedin: `${HOOK}\n\nSmall teams lose hours to tool sprawl. Cubits brings invoicing, lead forms and automations into one workspace. $29 a month flat, with a 7-day free trial.`,
   threads: `${HOOK}\n\nCubits runs invoicing, lead forms and automations from one workspace. $29/mo flat, 7-day free trial.`,
 };
 
 /** Card dimensions per platform. */
 export const CARD_SIZE: Record<SharePlatform, { width: number; height: number }> = {
   x: { width: 1200, height: 675 },
-  linkedin: { width: 1200, height: 627 },
   threads: { width: 1080, height: 1350 },
 };
 
