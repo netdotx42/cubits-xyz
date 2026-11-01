@@ -73,6 +73,25 @@ export default async function BillingPage() {
           </div>
         </Card>
       </div>
+      {role === "owner" && (
+        <div className="mt-4">
+          <Card>
+            <p className="font-mono text-[11px] uppercase tracking-widest text-mute">Your data</p>
+            <p className="mt-2 text-sm text-mute">Export everything in your workspace any time, even if your plan lapses.</p>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              {[
+                ["/api/export", "Everything (JSON)"],
+                ["/api/export?type=invoices&format=csv", "Invoices (CSV)"],
+                ["/api/export?type=submissions&format=csv", "Form submissions (CSV)"],
+              ].map(([href, label]) => (
+                <a key={href} href={href} className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-line px-5 text-sm transition-colors hover:border-paper hover:bg-panel">
+                  {label}
+                </a>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
     </>
   );
 }

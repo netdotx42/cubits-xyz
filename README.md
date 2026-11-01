@@ -35,6 +35,7 @@ Checks before deploying: `npm run typecheck` and `npm run build`.
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`, `STRIPE_PRICE_ID_ANNUAL` (optional) | Billing |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Transactional email |
 | `CRON_SECRET` | Bearer token protecting `/api/cron/*` |
+| `NEXT_PUBLIC_SUPPORT_EMAIL` | Support and contact address shown on the site (set a real mailbox) |
 
 ## Deploy to Vercel
 

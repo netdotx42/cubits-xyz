@@ -1,4 +1,5 @@
 "use client";
+import { SUPPORT_EMAIL } from "@/lib/site";
 
 import { useState } from "react";
 
@@ -13,7 +14,7 @@ export function ContactForm() {
     const d = new FormData(e.currentTarget);
     const subject = encodeURIComponent(`Cubits enquiry from ${String(d.get("name") ?? "")}`);
     const body = encodeURIComponent(`${String(d.get("message") ?? "")}\n\nFrom: ${String(d.get("name") ?? "")} <${String(d.get("email") ?? "")}>`);
-    window.location.href = `mailto:hello@cubits.app?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
     setSent(true);
   }
 
@@ -21,7 +22,7 @@ export function ContactForm() {
     return (
       <div className="rounded-xl border border-line bg-panel p-6">
         <div className="font-mono text-[11px] uppercase tracking-widest text-mute">Sent</div>
-        <p className="mt-2 text-lg tracking-tight">Thanks. Your email app should have opened with the message. If not, write to hello@cubits.app.</p>
+        <p className="mt-2 text-lg tracking-tight">Thanks. Your email app should have opened with the message. If not, write to {SUPPORT_EMAIL}.</p>
       </div>
     );
   }
