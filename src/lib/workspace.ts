@@ -11,6 +11,8 @@ export type Workspace = {
   plan_status: "none" | "trialing" | "active" | "past_due" | "canceled";
   trial_end: string | null;
   seats: number;
+  agents_status: "none" | "trialing" | "active" | "past_due" | "canceled";
+  agents_period_end: string | null;
 };
 
 export type WorkspaceContext = {

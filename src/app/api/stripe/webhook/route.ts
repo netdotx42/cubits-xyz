@@ -22,6 +22,17 @@ function mapStatus(s: Stripe.Subscription.Status): PlanStatus {
 async function syncSubscription(sub: Stripe.Subscription) {
   const admin = supabaseAdmin();
   const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+  // Agents is a separate yearly subscription on the same customer; it must not touch the Cubits plan.
+  if (process.env.STRIPE_PRICE_ID_AGENTS && sub.items.data.some((i) => i.price.id === process.env.STRIPE_PRICE_ID_AGENTS)) {
+    const agents = {
+      agents_subscription_id: sub.id,
+      agents_status: mapStatus(sub.status),
+      agents_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+    };
+    const id = sub.metadata?.workspace_id;
+    await (id ? admin.from("workspaces").update(agents).eq("id", id) : admin.from("workspaces").update(agents).eq("stripe_customer_id", customerId));
+    return;
+  }
   const update = {
     stripe_subscription_id: sub.id,
     stripe_customer_id: customerId,

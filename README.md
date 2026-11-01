@@ -37,6 +37,14 @@ Checks before deploying: `npm run typecheck` and `npm run build`.
 | `CRON_SECRET` | Bearer token protecting `/api/cron/*` |
 | `NEXT_PUBLIC_SUPPORT_EMAIL` | Support and contact address shown on the site (set a real mailbox) |
 
+## Agents (add-on)
+
+Run `supabase/agents.sql` after `schema.sql`. Set `STRIPE_PRICE_ID_AGENTS`, `ANTHROPIC_API_KEY` (and optionally `AGENTS_MODEL`).
+Public API under `/v1` (Bearer `cbk_...` keys): `POST/GET /v1/agents`, `PATCH /v1/agents/{id}`, `POST /v1/agents/{id}/runs` (Idempotency-Key, `?stream=1`),
+`GET /v1/runs/{id}`, `POST /v1/runs/{id}/approve`, `GET /v1/usage`, `POST /v1/webhooks`.
+Limits: 5 steps and 20k tokens per run, 3,000 runs per yearly period, 60 requests/min per key (per-instance, best effort).
+Sensitive tools (send_email) pause the run until a human approves it in the app or via the API.
+
 ## Deploy to Vercel
 
 1. Import `netdotx42/cubits-xyz` in Vercel. Framework preset: Next.js (auto-detected). Node 20+.

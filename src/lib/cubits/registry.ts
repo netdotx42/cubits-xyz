@@ -10,4 +10,5 @@ export const CUBITS: CubitDef[] = [
   { id: "invoices", name: "Invoices", tagline: "Branded invoices and quotes, sent in a click.", route: "/app/invoices", icon: "▤" },
   { id: "forms", name: "Forms", tagline: "Embeddable lead forms that land in your inbox.", route: "/app/forms", icon: "◧" },
   { id: "automations", name: "Automations", tagline: "When this happens, do that. No code.", route: "/app/automations", icon: "↯" },
+  { id: "agents", name: "Agents", tagline: "AI agents with an API. Tools, approvals and spend caps built in.", route: "/app/agents", icon: "◈" },
 ];
