@@ -7,14 +7,14 @@ export function generateStaticParams() {
 }
 
 const GLOW = "#7dd3fc";
-const LABEL: Record<SharePlatform, string> = { x: "X", linkedin: "LinkedIn", instagram: "Instagram" };
+const LABEL: Record<SharePlatform, string> = { x: "X", linkedin: "LinkedIn", instagram: "Link in bio", threads: "Threads" };
 
 export async function GET(_req: Request, { params }: { params: Promise<{ platform: string }> }) {
   const { platform } = await params;
   if (!PLATFORMS.includes(platform as SharePlatform)) return new Response("Not found", { status: 404 });
   const p = platform as SharePlatform;
   const size = CARD_SIZE[p];
-  const portrait = p === "instagram";
+  const portrait = p === "instagram" || p === "threads";
   const lines = ["Invoices in one tab.", "Leads in another.", "Follow-ups in your head."];
   void HOOK;
 
@@ -76,7 +76,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ platfor
           >
             Start your 7-day free trial
           </div>
-          <div style={{ display: "flex", fontSize: portrait ? 28 : 22, color: "#737373" }}>{portrait ? "Link in bio" : LABEL[p]}</div>
+          <div style={{ display: "flex", fontSize: portrait ? 28 : 22, color: "#737373" }}>{LABEL[p]}</div>
         </div>
       </div>
     ),
