@@ -26,16 +26,6 @@ function ThreadsIcon() {
     </svg>
   );
 }
-function InstagramIcon() {
-  return (
-    <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2">
-      <rect x="3" y="3" width="18" height="18" rx="5" />
-      <circle cx="12" cy="12" r="4" />
-      <circle cx="17.5" cy="6.5" r="1" className="fill-current" stroke="none" />
-    </svg>
-  );
-}
-
 export function ShareBar() {
   const [note, setNote] = useState<string | null>(null);
 
@@ -57,24 +47,19 @@ export function ShareBar() {
   function shareX() {
     open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(SHARE_TEXT.x)}&url=${encodeURIComponent(siteUrl())}`);
   }
-  function shareLinkedIn() {
-    open(`https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(`${SHARE_TEXT.linkedin}\n\n${siteUrl()}`)}`);
+  async function shareLinkedIn() {
+    // LinkedIn no longer reliably honours prefilled text from a link, so copy the post first
+    // and also pass it to the composer. If the box opens empty, the text is already on the clipboard.
+    const text = `${SHARE_TEXT.linkedin}
+
+${siteUrl()}`;
+    const ok = await copy(text);
+    open(`https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(text)}`);
+    flash(ok ? "Post text copied. If the LinkedIn box is empty, paste it (Ctrl/Cmd+V)." : "If the LinkedIn box is empty, copy the text from the card caption below.");
   }
   function shareThreads() {
     open(`https://www.threads.net/intent/post?text=${encodeURIComponent(`${SHARE_TEXT.threads}\n\n${siteUrl()}`)}`);
   }
-  async function shareInstagram() {
-    // Instagram has no web share link: copy the caption and download the card to post from your phone.
-    const ok = await copy(SHARE_TEXT.instagram);
-    const a = document.createElement("a");
-    a.href = "/api/share/instagram";
-    a.download = "cubits-instagram.png";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    flash(ok ? "Caption copied and card downloaded. Post both from the Instagram app." : "Card downloaded. Caption copy was blocked by your browser.");
-  }
-
   return (
     <div>
       <div className="font-mono text-[11px] uppercase tracking-widest text-mute">Share Cubits</div>
@@ -82,12 +67,11 @@ export function ShareBar() {
         <button type="button" onClick={shareX} className={btn}><XIcon /> Post on X</button>
         <button type="button" onClick={shareLinkedIn} className={btn}><LinkedInIcon /> Share on LinkedIn</button>
         <button type="button" onClick={shareThreads} className={btn}><ThreadsIcon /> Post on Threads</button>
-        <button type="button" onClick={shareInstagram} className={btn}><InstagramIcon /> Instagram card + caption</button>
       </div>
       <div className="mt-3 flex flex-wrap gap-x-4 text-xs text-mute">
-        {(["x", "linkedin", "instagram", "threads"] as SharePlatform[]).map((p) => (
+        {(["x", "linkedin", "threads"] as SharePlatform[]).map((p) => (
           <a key={p} href={`/api/share/${p}`} download={`cubits-${p}.png`} className="inline-flex min-h-[32px] items-center underline-offset-4 hover:text-glow-soft hover:underline">
-            {p === "x" ? "X card" : p === "linkedin" ? "LinkedIn card" : p === "threads" ? "Threads card" : "Instagram card"}
+            {p === "x" ? "X card" : p === "linkedin" ? "LinkedIn card" : "Threads card"}
           </a>
         ))}
       </div>

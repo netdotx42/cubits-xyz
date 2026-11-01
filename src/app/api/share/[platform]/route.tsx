@@ -7,14 +7,14 @@ export function generateStaticParams() {
 }
 
 const GLOW = "#7dd3fc";
-const LABEL: Record<SharePlatform, string> = { x: "X", linkedin: "LinkedIn", instagram: "Link in bio", threads: "Threads" };
+const LABEL: Record<SharePlatform, string> = { x: "X", linkedin: "LinkedIn", threads: "Threads" };
 
 export async function GET(_req: Request, { params }: { params: Promise<{ platform: string }> }) {
   const { platform } = await params;
   if (!PLATFORMS.includes(platform as SharePlatform)) return new Response("Not found", { status: 404 });
   const p = platform as SharePlatform;
   const size = CARD_SIZE[p];
-  const portrait = p === "instagram" || p === "threads";
+  const portrait = p === "threads";
   const lines = ["Invoices in one tab.", "Leads in another.", "Follow-ups in your head."];
   void HOOK;
 
