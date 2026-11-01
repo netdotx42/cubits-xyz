@@ -10,6 +10,7 @@ function SignupForm() {
   const router = useRouter();
   const params = useSearchParams();
   const invite = params.get("invite");
+  const agents = params.get("plan") === "agents";
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -20,7 +21,7 @@ function SignupForm() {
     setBusy(true);
     const form = new FormData(e.currentTarget);
     const company = String(form.get("company")).trim();
-    const next = invite ? `/invite/${invite}` : "/app/onboarding";
+    const next = invite ? `/invite/${invite}` : agents ? "/app/onboarding?plan=agents" : "/app/onboarding";
     const { data, error } = await supabaseBrowser().auth.signUp({
       email: String(form.get("email")).trim(),
       password: String(form.get("password")),
@@ -46,7 +47,7 @@ function SignupForm() {
   return (
     <>
       <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
-      <p className="mt-2 text-sm text-mute">7 days free. Then $29/month per workspace.</p>
+      <p className="mt-2 text-sm text-mute">{agents ? "Cubits Agents: 7 days free, then $499 a year." : "7 days free. Then $29/month per workspace."}</p>
       <form onSubmit={onSubmit} className="mt-8 space-y-5">
         <Input label="Company name" name="company" required autoComplete="organization" />
         <Input label="Work email" name="email" type="email" required autoComplete="email" />

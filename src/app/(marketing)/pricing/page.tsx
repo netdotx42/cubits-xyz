@@ -14,7 +14,16 @@ const included = [
   "Email support",
 ];
 
+const agentsIncluded = [
+  "REST API with keys, streaming and signed webhooks",
+  "3,000 agent runs a year",
+  "Tools: send email (human-approved), invoice drafts, read leads",
+  "Step, token and spend caps on every run",
+  "Up to 5 seats",
+];
+
 const faq = [
+  { q: "Can I buy Agents without Cubits?", a: "Yes. Agents is a standalone $499 a year plan with its own 7-day free trial. Add the $29 Cubits plan any time." },
   { q: "How does the free trial work?", a: "You get 7 days with everything unlocked. We take a card upfront and bill $29 when the trial ends." },
   { q: "Can I cancel any time?", a: "Yes. Cancel from workspace settings in one click. Cancel during the trial and you are not charged." },
   { q: "What happens at 1,000 automation runs?", a: "Automations are capped at about 1,000 runs per workspace per month. Past that, rules pause until the next cycle. Invoices and forms keep working." },
@@ -53,6 +62,26 @@ export default function Pricing() {
             <Button href="/signup" className="sm:flex-1">Start 7-day free trial</Button>
             <Button href="/contact" variant="ghost" className="sm:flex-1">Book a demo</Button>
           </div>
+          <p className="mt-4 font-mono text-[11px] uppercase tracking-widest text-mute">Card upfront. Cancel any time.</p>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-2xl px-4 pb-24 sm:px-6">
+        <div className="rounded-2xl border border-line bg-panel p-6 sm:p-10">
+          <Label>Cubits Agents · standalone</Label>
+          <div className="mt-4 flex items-baseline gap-2">
+            <span className="text-[clamp(3rem,12vw,4.5rem)] font-semibold leading-none tracking-tighter">$499</span>
+            <span className="text-mute">/ year per workspace</span>
+          </div>
+          <p className="mt-3 text-sm text-mute">AI agents you run from the app or your own code. No Cubits plan needed.</p>
+          <ul className="mt-8 border-t border-line">
+            {agentsIncluded.map((i) => (
+              <li key={i} className="flex min-h-[44px] items-center gap-3 border-b border-line py-2 text-sm">
+                <span aria-hidden className="text-[8px] text-glow">◼</span>{i}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-8"><Button href="/signup?plan=agents" className="w-full">Start 7-day free trial</Button></div>
           <p className="mt-4 font-mono text-[11px] uppercase tracking-widest text-mute">Card upfront. Cancel any time.</p>
         </div>
       </div>

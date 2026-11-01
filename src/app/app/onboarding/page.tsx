@@ -35,21 +35,20 @@ async function createWorkspace(formData: FormData) {
       console.error("welcome email failed", e);
     }
   }
-  redirect("/app/billing");
+  redirect(formData.get("plan") === "agents" ? "/app/agents" : "/app/billing");
 }
 
 function escapeHtml(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ error?: string; plan?: string }> }) {
   const supabase = await supabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const { data: existing } = await supabase.from("members").select("workspace_id").eq("user_id", user.id).limit(1).maybeSingle();
-  if (existing) redirect("/app");
-
-  const { error } = await searchParams;
+  const { error, plan } = await searchParams;
+  if (existing) redirect(plan === "agents" ? "/app/agents" : "/app");
   const company = (user.user_metadata?.company as string | undefined) ?? "";
 
   return (
@@ -57,6 +56,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
       <PageHeader title="Create your workspace" subtitle="One workspace per company. Your team shares it." />
       <Card>
         <form action={createWorkspace} className="space-y-5">
+          {plan === "agents" && <input type="hidden" name="plan" value="agents" />}
           <Input label="Company name" name="name" required maxLength={100} defaultValue={company} />
           {error && <p className="text-sm text-red-400">Could not create the workspace. Check the name and try again.</p>}
           <Button type="submit" className="w-full">Create workspace</Button>
