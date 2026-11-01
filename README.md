@@ -21,6 +21,8 @@ Stack: Next.js 15 (App Router) · Tailwind 3 · Supabase (auth + Postgres + RLS)
 8. In Supabase Auth settings, set the Site URL to `NEXT_PUBLIC_APP_URL` and add `{APP_URL}/auth/callback` as a redirect URL.
 9. `npm run dev`
 
+Checks before deploying: `npm run typecheck` and `npm run build`.
+
 ## Environment variables
 
 | Variable | Purpose |
@@ -32,12 +34,21 @@ Stack: Next.js 15 (App Router) · Tailwind 3 · Supabase (auth + Postgres + RLS)
 | `RESEND_API_KEY`, `EMAIL_FROM` | Transactional email |
 | `CRON_SECRET` | Bearer token protecting `/api/cron/*` |
 
-## Deploy
+## Deploy to Vercel
 
-Vercel is the simplest path: import the repo, add the env vars, deploy. `vercel.json` registers two crons
-(daily and weekly automations); Vercel sends `CRON_SECRET` automatically.
-On Netlify or Cloudflare, call the same `/api/cron/*` URLs from a scheduled function with
-`Authorization: Bearer $CRON_SECRET`.
+1. Import `netdotx42/cubits-xyz` in Vercel. Framework preset: Next.js (auto-detected). Node 20+.
+2. Add every variable from the table above under Settings → Environment Variables (Production, and Preview if you use previews).
+   Set `NEXT_PUBLIC_APP_URL` to your final domain (for example `https://cubits.xyz`), with no trailing slash. Redeploy after changing it.
+3. Deploy. Then wire the services to the live URL:
+   - **Stripe:** webhook endpoint `https://YOUR_DOMAIN/api/stripe/webhook` with the five events listed in Setup.
+   - **Supabase:** Auth → URL Configuration: Site URL = your domain, add `https://YOUR_DOMAIN/auth/callback` to Redirect URLs.
+   - **Resend:** verify your sending domain and set `EMAIL_FROM` to an address on it.
+4. Cron: `vercel.json` registers two crons (daily 08:00 UTC and Monday 08:00 UTC automations). Vercel sends
+   `Authorization: Bearer $CRON_SECRET` automatically once `CRON_SECRET` is set. Hobby plans allow daily crons, which is all this needs.
+5. Smoke test: sign up, create a workspace, start the trial with Stripe test card `4242 4242 4242 4242`,
+   create an invoice, build a form and submit it, add an automation, and check the run log.
+
+On Netlify or Cloudflare, call the same `/api/cron/*` URLs from a scheduled function with `Authorization: Bearer $CRON_SECRET`.
 
 ## How it fits together
 
