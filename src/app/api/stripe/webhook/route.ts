@@ -2,48 +2,71 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { mapStatus, productOf, shouldApply } from "@/lib/billing";
 
 export const runtime = "nodejs";
 
-type PlanStatus = "none" | "trialing" | "active" | "past_due" | "canceled";
+const customerOf = (c: string | Stripe.Customer | Stripe.DeletedCustomer) => (typeof c === "string" ? c : c.id);
 
-function mapStatus(s: Stripe.Subscription.Status): PlanStatus {
-  switch (s) {
-    case "trialing": return "trialing";
-    case "active": return "active";
-    case "past_due":
-    case "unpaid": return "past_due";
-    case "canceled":
-    case "incomplete_expired": return "canceled";
-    default: return "none"; // incomplete, paused
-  }
+/** Finds the workspace for a subscription: metadata first, then the Stripe customer. */
+async function findWorkspace(sub: Stripe.Subscription) {
+  const admin = supabaseAdmin();
+  const cols = "id, stripe_subscription_id, plan_status, agents_subscription_id, agents_status";
+  const id = sub.metadata?.workspace_id;
+  const { data } = id
+    ? await admin.from("workspaces").select(cols).eq("id", id).maybeSingle()
+    : await admin.from("workspaces").select(cols).eq("stripe_customer_id", customerOf(sub.customer)).maybeSingle();
+  return data;
 }
 
-async function syncSubscription(sub: Stripe.Subscription) {
+async function syncSubscription(fromEvent: Stripe.Subscription) {
+  // Stripe does not guarantee event order, so read the subscription's current state instead of the payload.
+  const sub = await stripe().subscriptions.retrieve(fromEvent.id).catch(() => fromEvent);
+  if (!sub.metadata?.workspace_id && fromEvent.metadata?.workspace_id) sub.metadata = { ...sub.metadata, ...fromEvent.metadata };
+
+  const ws = await findWorkspace(sub);
+  if (!ws) {
+    console.warn("stripe webhook: no workspace for subscription", sub.id);
+    return;
+  }
   const admin = supabaseAdmin();
-  const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+
   // Agents is a separate yearly subscription on the same customer; it must not touch the Cubits plan.
-  if (process.env.STRIPE_PRICE_ID_AGENTS && sub.items.data.some((i) => i.price.id === process.env.STRIPE_PRICE_ID_AGENTS)) {
-    const agents = {
+  if (productOf(sub) === "agents") {
+    if (!shouldApply(ws.agents_subscription_id, ws.agents_status, sub.id)) {
+      console.warn("stripe webhook: ignoring stale agents subscription", sub.id);
+      return;
+    }
+    await admin.from("workspaces").update({
       agents_subscription_id: sub.id,
       agents_status: mapStatus(sub.status),
       agents_period_end: new Date(sub.current_period_end * 1000).toISOString(),
-    };
-    const id = sub.metadata?.workspace_id;
-    await (id ? admin.from("workspaces").update(agents).eq("id", id) : admin.from("workspaces").update(agents).eq("stripe_customer_id", customerId));
+    }).eq("id", ws.id);
     return;
   }
-  const update = {
+
+  if (!shouldApply(ws.stripe_subscription_id, ws.plan_status, sub.id)) {
+    console.warn("stripe webhook: ignoring stale subscription", sub.id);
+    return;
+  }
+  await admin.from("workspaces").update({
     stripe_subscription_id: sub.id,
-    stripe_customer_id: customerId,
+    stripe_customer_id: customerOf(sub.customer),
     plan_status: mapStatus(sub.status),
     trial_end: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
-  };
-  const wsId = sub.metadata?.workspace_id;
-  if (wsId) {
-    await admin.from("workspaces").update(update).eq("id", wsId);
+  }).eq("id", ws.id);
+}
+
+/** A failed charge marks only the product whose subscription failed. */
+async function markPaymentFailed(inv: Stripe.Invoice) {
+  const subId = typeof inv.subscription === "string" ? inv.subscription : inv.subscription?.id;
+  if (!subId) return;
+  const sub = await stripe().subscriptions.retrieve(subId);
+  const admin = supabaseAdmin();
+  if (productOf(sub) === "agents") {
+    await admin.from("workspaces").update({ agents_status: "past_due" }).eq("agents_subscription_id", subId);
   } else {
-    await admin.from("workspaces").update(update).eq("stripe_customer_id", customerId);
+    await admin.from("workspaces").update({ plan_status: "past_due" }).eq("stripe_subscription_id", subId);
   }
 }
 
@@ -68,9 +91,8 @@ export async function POST(req: Request) {
           const subId = typeof session.subscription === "string" ? session.subscription : session.subscription.id;
           const sub = await stripe().subscriptions.retrieve(subId);
           if (wsId && !sub.metadata?.workspace_id) {
-            await supabaseAdmin().from("workspaces").update({
-              stripe_customer_id: typeof sub.customer === "string" ? sub.customer : sub.customer.id,
-            }).eq("id", wsId);
+            await supabaseAdmin().from("workspaces").update({ stripe_customer_id: customerOf(sub.customer) })
+              .eq("id", wsId).is("stripe_customer_id", null);
             sub.metadata = { ...sub.metadata, workspace_id: wsId };
           }
           await syncSubscription(sub);
@@ -82,14 +104,9 @@ export async function POST(req: Request) {
       case "customer.subscription.deleted":
         await syncSubscription(event.data.object as Stripe.Subscription);
         break;
-      case "invoice.payment_failed": {
-        const inv = event.data.object as Stripe.Invoice;
-        const customerId = typeof inv.customer === "string" ? inv.customer : inv.customer?.id;
-        if (customerId) {
-          await supabaseAdmin().from("workspaces").update({ plan_status: "past_due" }).eq("stripe_customer_id", customerId);
-        }
+      case "invoice.payment_failed":
+        await markPaymentFailed(event.data.object as Stripe.Invoice);
         break;
-      }
     }
   } catch (err) {
     console.error("stripe webhook handler failed", event.type, err);

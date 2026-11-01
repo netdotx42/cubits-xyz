@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { supabaseServer, supabaseAdmin } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
+import { APP_URL } from "@/lib/stripe";
+import { escapeHtml } from "@/components/cubits/util";
 import { PageHeader } from "@/components/app/PageHeader";
 import { Card } from "@/components/app/Card";
 import { Input } from "@/components/app/Input";
@@ -29,17 +31,13 @@ async function createWorkspace(formData: FormData) {
       await sendEmail({
         to: user.email,
         subject: "Welcome to Cubits",
-        html: `<p>Welcome to Cubits.</p><p>Your workspace "${escapeHtml(name)}" is ready. Start your 7-day free trial to unlock invoices, forms and automations.</p><p><a href="${process.env.NEXT_PUBLIC_APP_URL}/app/billing">Start your free trial</a></p>`,
+        html: `<p>Welcome to Cubits.</p><p>Your workspace "${escapeHtml(name)}" is ready. Start your 7-day free trial to unlock invoices, forms and automations.</p><p><a href="${APP_URL()}/app/billing">Start your free trial</a></p>`,
       });
     } catch (e) {
       console.error("welcome email failed", e);
     }
   }
   redirect(formData.get("plan") === "agents" ? "/app/agents" : "/app/billing");
-}
-
-function escapeHtml(s: string) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ error?: string; plan?: string }> }) {

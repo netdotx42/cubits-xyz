@@ -12,7 +12,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const parsed = z.object({ approve: z.boolean() }).safeParse(await req.json().catch(() => null));
   if (!parsed.success) return json({ error: "Body must be { approve: boolean }." }, 400);
   try {
-    const { run } = await resumeRun({ workspaceId: auth.workspaceId, runId: id, approve: parsed.data.approve });
+    const { run } = await resumeRun({
+      workspaceId: auth.workspaceId, runId: id, approve: parsed.data.approve,
+      decidedBy: `key:${auth.keyId}`, apiKeyId: auth.keyId,
+    });
     return json(run);
   } catch (e) {
     if (e instanceof RunError) return json({ error: e.message }, e.status);

@@ -5,6 +5,8 @@ import { sendEmail } from "@/lib/email";
 import { emit } from "@/lib/events";
 import { escapeHtml } from "@/components/cubits/util";
 import type { FormField } from "@/components/cubits/forms";
+import { allow, clientIp } from "@/lib/rate-limit";
+import { workspacePlan } from "@/lib/access";
 
 export const dynamic = "force-dynamic";
 
@@ -18,29 +20,17 @@ function json(body: unknown, status = 200) {
   return NextResponse.json(body, { status, headers: CORS });
 }
 
-// Simple per-IP limiter: 10 submissions per minute per IP+slug (per server instance).
-const hits = new Map<string, number[]>();
-function limited(key: string) {
-  const now = Date.now();
-  const recent = (hits.get(key) ?? []).filter((t) => now - t < 60_000);
-  if (recent.length >= 10) {
-    hits.set(key, recent);
-    return true;
-  }
-  recent.push(now);
-  hits.set(key, recent);
-  if (hits.size > 5000) for (const [k, v] of hits) if (!v.some((t) => now - t < 60_000)) hits.delete(k);
-  return false;
-}
-
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS });
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const ip = (req.headers.get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
-  if (limited(`${ip}:${slug}`)) return json({ error: "Too many submissions. Try again shortly." }, 429);
+  if (!/^[a-z0-9]{6,64}$/i.test(slug)) return json({ error: "Form not found" }, 404);
+  // Shared across server instances: 10 per minute per IP and form, 300 per hour per form.
+  const ip = clientIp(req);
+  const ok = (await allow(`form:${slug}:${ip}`, 10, 60)) && (await allow(`form:${slug}`, 300, 3600));
+  if (!ok) return json({ error: "Too many submissions. Try again shortly." }, 429);
 
   let body: unknown;
   try {
@@ -57,6 +47,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   const admin = supabaseAdmin();
   const { data: form } = await admin.from("forms").select("id, workspace_id, name, fields, notify_email").eq("slug", slug).maybeSingle();
   if (!form) return json({ error: "Form not found" }, 404);
+  // Forms are part of the Cubits plan: a lapsed workspace stops accepting submissions.
+  const plan = await workspacePlan(form.workspace_id);
+  if (!plan?.cubits) return json({ error: "This form is not accepting submissions right now." }, 403);
 
   const fields = (form.fields ?? []) as FormField[];
   const shape: Record<string, z.ZodTypeAny> = {};

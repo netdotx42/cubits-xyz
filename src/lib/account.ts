@@ -33,7 +33,7 @@ export function accountStatus(
       return {
         state: "trial_last_day", daysLeft, used, tone: "urgent",
         pill: daysLeft === 0 ? "Trial ends today" : "1 day left",
-        message: "Your trial ends within 24 hours. Your card is charged $29 when it does. Cancel in Billing to avoid it.",
+        message: "Your trial ends within 24 hours. Your card is charged for your plan when it does. Cancel in Billing to avoid it.",
         cta: { label: "Manage billing", href: "/app/billing" },
       };
     }
@@ -41,7 +41,7 @@ export function accountStatus(
       return {
         state: "trial_ending", daysLeft, used, tone: "warn",
         pill: `${daysLeft} ${unit} left`,
-        message: `${daysLeft} ${unit} left in your free trial. Your card is charged $29 when it ends.`,
+        message: `${daysLeft} ${unit} left in your free trial. Your card is charged for your plan when it ends.`,
         cta: { label: "Manage billing", href: "/app/billing" },
       };
     }
@@ -65,7 +65,9 @@ export function accountStatus(
   }
   return {
     state: "inactive", daysLeft: null, used: null, tone: "urgent", pill: "No active plan",
-    message: "Start your 7-day free trial to unlock Invoices, Forms and Automations.",
-    cta: { label: "Start free trial", href: "/app/billing" },
+    message: ws.plan_status === "canceled"
+      ? "Your plan has ended. Resubscribe to unlock Invoices, Forms and Automations again."
+      : "Start your 7-day free trial to unlock Invoices, Forms and Automations.",
+    cta: { label: ws.plan_status === "canceled" ? "Resubscribe" : "Start free trial", href: "/app/billing" },
   };
 }

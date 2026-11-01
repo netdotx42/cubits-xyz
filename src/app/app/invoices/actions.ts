@@ -5,6 +5,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { emit } from "@/lib/events";
 import { sendEmail } from "@/lib/email";
 import { escapeHtml, calcTotals, money, fmtDate, type LineItem } from "@/components/cubits/util";
+import { insertNumbered, nextNumber } from "@/lib/invoices/number";
 
 const InvoiceInput = z.object({
   id: z.string().uuid().optional(),
@@ -28,18 +29,6 @@ const InvoiceInput = z.object({
 export type InvoiceInputType = z.infer<typeof InvoiceInput>;
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
 
-async function nextNumber(workspaceId: string, kind: "invoice" | "quote") {
-  const prefix = kind === "invoice" ? "INV-" : "QUO-";
-  const supabase = await supabaseServer();
-  const { data } = await supabase.from("invoices").select("number").eq("workspace_id", workspaceId).eq("kind", kind);
-  let max = 0;
-  for (const r of data ?? []) {
-    const n = parseInt(String(r.number).replace(prefix, ""), 10);
-    if (Number.isFinite(n) && n > max) max = n;
-  }
-  return `${prefix}${String(max + 1).padStart(4, "0")}`;
-}
-
 export async function saveInvoice(raw: InvoiceInputType): Promise<ActionResult> {
   const { workspace } = await requireWorkspace();
   const parsed = InvoiceInput.safeParse(raw);
@@ -60,37 +49,29 @@ export async function saveInvoice(raw: InvoiceInputType): Promise<ActionResult> 
     const { data: existing } = await supabase.from("invoices").select("kind, number").eq("id", v.id).eq("workspace_id", workspace.id).maybeSingle();
     if (!existing) return { ok: false, error: "Not found" };
     const update: Record<string, unknown> = { ...fields };
-    if (existing.kind !== v.kind) update.number = await nextNumber(workspace.id, v.kind);
+    if (existing.kind !== v.kind) update.number = await nextNumber(supabase, workspace.id, v.kind);
     const { error } = await supabase.from("invoices").update(update).eq("id", v.id).eq("workspace_id", workspace.id);
     if (error) return { ok: false, error: error.message };
     return { ok: true, id: v.id };
   }
 
-  // Retry a few times in case two creates race for the same number.
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const number = await nextNumber(workspace.id, v.kind);
-    const { data, error } = await supabase
-      .from("invoices")
-      .insert({ ...fields, workspace_id: workspace.id, number, status: "draft" })
-      .select("id, number")
-      .single();
-    if (error || !data) {
-      if (attempt === 2) return { ok: false, error: error?.message ?? "Could not create" };
-      continue;
-    }
-    const totals = calcTotals(fields.items as LineItem[], v.tax_rate);
-    await emit(workspace.id, "invoice.created", {
-      invoice_id: data.id,
-      number: data.number,
-      kind: v.kind,
-      client_name: v.client_name,
-      client_email: fields.client_email,
-      total: totals.total,
-      currency: workspace.currency,
-    });
-    return { ok: true, id: data.id };
+  let data: { id: string; number: string };
+  try {
+    data = await insertNumbered(supabase, { ...fields, workspace_id: workspace.id, status: "draft" });
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Could not create" };
   }
-  return { ok: false, error: "Could not create" };
+  const totals = calcTotals(fields.items as LineItem[], v.tax_rate);
+  await emit(workspace.id, "invoice.created", {
+    invoice_id: data.id,
+    number: data.number,
+    kind: v.kind,
+    client_name: v.client_name,
+    client_email: fields.client_email,
+    total: totals.total,
+    currency: workspace.currency,
+  });
+  return { ok: true, id: data.id };
 }
 
 export async function sendInvoice(id: string, note: string): Promise<ActionResult> {
@@ -141,6 +122,8 @@ export async function markPaid(id: string): Promise<ActionResult> {
   const supabase = await supabaseServer();
   const { data: inv } = await supabase.from("invoices").select("*").eq("id", id).eq("workspace_id", workspace.id).maybeSingle();
   if (!inv) return { ok: false, error: "Not found" };
+  // Already paid: nothing to change, and do not fire invoice.paid automations twice.
+  if (inv.status === "paid") return { ok: true, id };
   const { error } = await supabase
     .from("invoices")
     .update({ status: "paid", paid_at: new Date().toISOString() })

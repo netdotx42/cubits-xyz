@@ -18,6 +18,7 @@ export function SidebarNav({ workspaceName, onNavigate }: { workspaceName: strin
     ...CUBITS.map((c) => ({ href: c.route, label: c.name, icon: c.icon })),
     { href: "/app/team", label: "Team", icon: "◎" },
     { href: "/app/billing", label: "Billing", icon: "$" },
+    { href: "/app/settings", label: "Settings", icon: "⚙" },
   ];
 
   async function signOut() {

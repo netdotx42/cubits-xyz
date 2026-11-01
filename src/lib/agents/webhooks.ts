@@ -1,19 +1,8 @@
 import { createHmac } from "crypto";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { safePost, safeUrl } from "@/lib/net/safe-fetch";
 
-/** Block obvious internal targets (host-only check, same as automations). */
-export function safeUrl(raw: string): URL | null {
-  try {
-    const u = new URL(raw);
-    if (u.protocol !== "https:") return null;
-    const h = u.hostname.toLowerCase();
-    if (h === "localhost" || h.endsWith(".local") || h.endsWith(".internal") || h.includes(":")) return null;
-    if (/^(10|127|0)\./.test(h) || /^192\.168\./.test(h) || /^169\.254\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h)) return null;
-    return u;
-  } catch {
-    return null;
-  }
-}
+export { safeUrl };
 
 /** Fire signed webhooks for an event. Never throws. */
 export async function dispatch(workspaceId: string, event: "run.completed" | "run.needs_approval", data: unknown) {
@@ -24,16 +13,13 @@ export async function dispatch(workspaceId: string, event: "run.completed" | "ru
       (hooks ?? [])
         .filter((h) => (h.events as string[]).includes(event) && safeUrl(h.url))
         .map((h) =>
-          fetch(h.url, {
-            method: "POST",
+          safePost(h.url, null, {
+            rawBody: body,
+            timeoutMs: 5000,
             headers: {
-              "content-type": "application/json",
               "x-cubits-event": event,
               "x-cubits-signature": createHmac("sha256", h.secret).update(body).digest("hex"),
             },
-            body,
-            redirect: "manual",
-            signal: AbortSignal.timeout(5000),
           }).catch(() => undefined)
         )
     );

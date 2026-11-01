@@ -4,6 +4,7 @@ import { SidebarNav } from "@/components/app/Sidebar";
 import { MobileNav } from "@/components/app/MobileNav";
 import { DaysLeftBar } from "@/components/app/DaysLeft";
 import type { Workspace } from "@/lib/workspace";
+import { isOn } from "@/lib/access";
 
 type Ws = { name: string; plan_status: string; trial_end: string | null; agents_status: string };
 
@@ -16,6 +17,7 @@ async function loadWorkspace(): Promise<Ws | null> {
       .from("members")
       .select("workspaces(name, plan_status, trial_end, agents_status)")
       .eq("user_id", user.id)
+      .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
     return (data?.workspaces as unknown as Ws | null) ?? null;
@@ -34,7 +36,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       </aside>
       <div className="min-w-0 flex-1">
         <MobileNav workspaceName={ws?.name ?? null} />
-        {ws && !(ws.plan_status === "none" && ["trialing", "active"].includes(ws.agents_status)) && <DaysLeftBar ws={ws as Pick<Workspace, "plan_status" | "trial_end">} />}
+        {ws && !(ws.plan_status === "none" && isOn(ws.agents_status)) && <DaysLeftBar ws={ws as Pick<Workspace, "plan_status" | "trial_end">} />}
         <main className="mx-auto w-full max-w-5xl px-4 py-8 md:px-8">{children}</main>
       </div>
     </div>

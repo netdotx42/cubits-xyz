@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
+import { isOn } from "@/lib/access";
 
 export type Workspace = {
   id: string;
@@ -22,9 +23,14 @@ export type WorkspaceContext = {
   workspace: Workspace;
 };
 
-/** Access = trialing or active. */
+/** Cubits access = trialing or active. */
 export function hasAccess(ws: Pick<Workspace, "plan_status">) {
-  return ws.plan_status === "trialing" || ws.plan_status === "active";
+  return isOn(ws.plan_status);
+}
+
+/** Agents add-on access = trialing or active. */
+export function hasAgentsAccess(ws: Pick<Workspace, "agents_status">) {
+  return isOn(ws.agents_status);
 }
 
 /**
@@ -42,6 +48,8 @@ export async function requireWorkspace(opts: { allowUnpaid?: boolean } = {}): Pr
     .from("members")
     .select("role, workspaces(*)")
     .eq("user_id", user.id)
+    // A user normally has one workspace; if they have more, always use the oldest membership.
+    .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
 

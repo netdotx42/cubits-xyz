@@ -1,6 +1,8 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
 import { escapeHtml } from "@/components/cubits/util";
+import { allowWorkspaceEmail } from "@/lib/rate-limit";
+import { insertNumbered } from "@/lib/invoices/number";
 
 export type ToolName = "send_email" | "create_invoice_draft" | "read_form_submissions";
 
@@ -65,9 +67,11 @@ export async function runTool(workspaceId: string, name: ToolName, input: Obj): 
   if (name === "send_email") {
     const to = str(input.to, 254);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) throw new Error("Invalid recipient email.");
+    if (!(await allowWorkspaceEmail(workspaceId, 1))) throw new Error("Daily email limit reached for this workspace.");
     const { data: ws } = await db.from("workspaces").select("name").eq("id", workspaceId).single();
-    const html = `<div style="white-space:pre-wrap;font-family:sans-serif">${escapeHtml(str(input.body))}</div>`;
-    const r = await sendEmail({ to, subject: str(input.subject, 200), html });
+    const html = `<div style="white-space:pre-wrap;font-family:sans-serif">${escapeHtml(str(input.body))}</div>` +
+      `<p style="margin-top:24px;color:#888;font-size:12px">Sent by ${escapeHtml(ws?.name ?? "a Cubits workspace")} using Cubits.</p>`;
+    const r = await sendEmail({ to, subject: str(input.subject, 200), html, tenant: true });
     return { sent: !r.skipped, note: r.skipped ? "Email provider not configured; nothing sent." : `Sent as ${ws?.name ?? "workspace"}.` };
   }
 
@@ -77,18 +81,11 @@ export async function runTool(workspaceId: string, name: ToolName, input: Obj): 
       return { description: str(o.description, 300), qty: Number(o.qty) || 1, unit_price: Number(o.unit_price) || 0 };
     });
     if (!items.length) throw new Error("At least one line item is required.");
-    const { count } = await db.from("invoices").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId);
-    const number = `INV-${String((count ?? 0) + 1).padStart(4, "0")}`;
-    const { data, error } = await db
-      .from("invoices")
-      .insert({
-        workspace_id: workspaceId, kind: "invoice", number, status: "draft", items,
-        client_name: str(input.client_name, 200), client_email: input.client_email ? str(input.client_email, 254) : null,
-        notes: input.notes ? str(input.notes, 2000) : null,
-      })
-      .select("id, number")
-      .single();
-    if (error) throw new Error(error.message);
+    const data = await insertNumbered(db, {
+      workspace_id: workspaceId, kind: "invoice", status: "draft", items,
+      client_name: str(input.client_name, 200), client_email: input.client_email ? str(input.client_email, 254) : null,
+      notes: input.notes ? str(input.notes, 2000) : null,
+    });
     return { invoice_id: data.id, number: data.number, status: "draft" };
   }
 

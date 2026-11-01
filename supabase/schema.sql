@@ -112,13 +112,21 @@ alter table submissions enable row level security;
 alter table automations enable row level security;
 alter table automation_runs enable row level security;
 
+drop policy if exists "ws read" on workspaces;
 create policy "ws read" on workspaces for select using (is_member(id));
+drop policy if exists "members read" on members;
 create policy "members read" on members for select using (is_member(workspace_id));
+drop policy if exists "invites read" on invites;
 create policy "invites read" on invites for select using (is_member(workspace_id));
+drop policy if exists "invoices all" on invoices;
 create policy "invoices all" on invoices for all using (is_member(workspace_id)) with check (is_member(workspace_id));
+drop policy if exists "forms all" on forms;
 create policy "forms all" on forms for all using (is_member(workspace_id)) with check (is_member(workspace_id));
+drop policy if exists "submissions read" on submissions;
 create policy "submissions read" on submissions for select using (is_member(workspace_id));
+drop policy if exists "automations all" on automations;
 create policy "automations all" on automations for all using (is_member(workspace_id)) with check (is_member(workspace_id));
+drop policy if exists "runs read" on automation_runs;
 create policy "runs read" on automation_runs for select using (is_member(workspace_id));
 
 -- Workspaces, members and invites are only ever written server-side with the service role.

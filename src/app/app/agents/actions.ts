@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireWorkspace } from "@/lib/workspace";
+import { hasAgentsAccess, requireWorkspace } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { agentBody } from "@/lib/agents/schema";
 import { generateKey } from "@/lib/agents/keys";
@@ -9,7 +9,7 @@ import { RunError, resumeRun, startRun } from "@/lib/agents/runner";
 
 async function ctx() {
   const c = await requireWorkspace({ allowUnpaid: true });
-  if (!["trialing", "active"].includes(c.workspace.agents_status)) throw new Error("Agents plan is not active.");
+  if (!hasAgentsAccess(c.workspace)) throw new Error("Agents plan is not active.");
   return c;
 }
 
@@ -57,9 +57,9 @@ export async function runAgent(agentId: string, input: string): Promise<RunResul
 }
 
 export async function decideRun(runId: string, approve: boolean) {
-  const { workspace } = await ctx();
+  const { workspace, userId } = await ctx();
   try {
-    await resumeRun({ workspaceId: workspace.id, runId, approve });
+    await resumeRun({ workspaceId: workspace.id, runId, approve, decidedBy: `user:${userId}` });
   } catch (e) {
     if (!(e instanceof RunError)) throw e;
   }

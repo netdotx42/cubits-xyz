@@ -1,4 +1,7 @@
+import { randomUUID } from "crypto";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { workspacePlan } from "@/lib/access";
+import { TransientError } from "@/lib/net/safe-fetch";
 import { runAction } from "./actions";
 import { isAction, MONTHLY_RUN_CAP, type AutomationRow } from "./types";
 
@@ -16,6 +19,10 @@ export async function executeAutomations(
 ): Promise<void> {
   try {
     if (automations.length === 0) return;
+    // Automations are part of the Cubits plan: a lapsed workspace runs nothing.
+    const plan = await workspacePlan(workspaceId);
+    if (!plan?.cubits) return;
+
     const db = supabaseAdmin();
     const { count } = await db
       .from("automation_runs")
@@ -33,11 +40,13 @@ export async function executeAutomations(
       let error: string | null = null;
       try {
         if (!isAction(a.action)) throw new Error(`Unknown action: ${a.action}`);
-        const ctx = { workspaceId, event, payload };
+        const ctx = { workspaceId, workspaceName: plan.name, event, payload, deliveryId: randomUUID() };
         try {
           await runAction(a.action, a.config, ctx);
         } catch (first) {
-          if (first instanceof Error && first.message.startsWith("Invalid config")) throw first;
+          // Retry once, and only when the failure is clearly transient (network, timeout, 429, 5xx).
+          // Anything else may already have had an effect, so a retry could deliver twice.
+          if (!(first instanceof TransientError)) throw first;
           await runAction(a.action, a.config, ctx);
         }
       } catch (e) {
