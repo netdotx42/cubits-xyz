@@ -11,9 +11,9 @@ export default function Contact() {
         <div className="grid gap-12 md:grid-cols-2">
           <div>
             <Label>Contact</Label>
-            <h1 className="mt-6 text-[clamp(2.5rem,9vw,5rem)] font-semibold leading-[0.97] tracking-tighter">Book a demo or ask us anything.</h1>
+            <h1 className="mt-6 text-[clamp(2.5rem,9vw,5rem)] font-semibold leading-[0.97] tracking-tighter">Let us power your business. Book a demo or ask anything.</h1>
             <p className="mt-5 max-w-md text-mute">A real person replies, usually within one business day.</p>
-            <div className="mt-8 rounded-xl border border-line bg-panel p-5">
+            <div className="mt-8 rounded-xl border border-glow/25 bg-panel p-5 shadow-[0_0_40px_-18px_rgba(125,211,252,0.5)]">
               <Label>Your data</Label>
               <p className="mt-2 text-sm">Your data stays yours. Export it any time. A data processing agreement (DPA) is available on request.</p>
             </div>

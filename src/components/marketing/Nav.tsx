@@ -16,7 +16,7 @@ export function Nav() {
     <header className="sticky top-0 z-50 border-b border-line bg-black/70 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex min-h-[44px] items-center gap-2 text-base font-semibold tracking-tight" onClick={() => setOpen(false)}>
-          <span aria-hidden className="text-[10px]">◼</span>
+          <span aria-hidden className="text-[10px] text-glow drop-shadow-[0_0_6px_rgba(125,211,252,0.8)]">◼</span>
           Cubits
         </Link>
         <nav className="hidden items-center gap-1 md:flex" aria-label="Main">

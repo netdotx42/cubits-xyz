@@ -12,9 +12,9 @@ export function Footer() {
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[2fr_1fr_1fr_1fr]">
         <div>
           <div className="flex items-center gap-2 font-semibold tracking-tight">
-            <span aria-hidden className="text-[10px]">◼</span> Cubits
+            <span aria-hidden className="text-[10px] text-glow drop-shadow-[0_0_6px_rgba(125,211,252,0.8)]">◼</span> Cubits
           </div>
-          <p className="mt-3 max-w-xs text-sm text-mute">Small tools for small teams. Invoices, forms and automations in one workspace.</p>
+          <p className="mt-3 max-w-xs text-sm text-mute">Powerful tools for ambitious small teams. Invoices, forms and automations in one workspace.</p>
         </div>
         {cols.map((c) => (
           <div key={c.title}>

@@ -26,26 +26,26 @@ export default function Pricing() {
   return (
     <>
       <section className="relative">
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[500px] bg-[radial-gradient(ellipse_50%_60%_at_50%_0%,rgba(255,255,255,0.10),transparent)]" />
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[500px] bg-[radial-gradient(ellipse_50%_60%_at_50%_0%,rgba(125,211,252,0.20),transparent)]" />
         <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-20 text-center sm:px-6 md:pt-28">
           <Label>Pricing</Label>
-          <h1 className="mt-6 text-[clamp(2.5rem,9vw,5.5rem)] font-semibold leading-[0.97] tracking-tighter">One plan. No tiers.</h1>
-          <p className="mx-auto mt-5 max-w-md text-mute">Everything in Cubits for a flat monthly price per workspace.</p>
+          <h1 className="mt-6 text-[clamp(2.5rem,9vw,5.5rem)] font-semibold leading-[0.97] tracking-tighter">One plan. <span className="bg-gradient-to-r from-glow-soft via-glow to-white bg-clip-text text-transparent">Total power.</span></h1>
+          <p className="mx-auto mt-5 max-w-md text-mute">Every tool in Cubits, fully unlocked, for one flat price per workspace.</p>
         </div>
       </section>
 
       <div className="mx-auto max-w-2xl px-4 pb-24 sm:px-6">
-        <div className="rounded-2xl border border-line bg-panel p-6 sm:p-10">
+        <div className="rounded-2xl border border-glow/30 bg-panel p-6 shadow-[0_0_80px_-24px_rgba(125,211,252,0.55)] sm:p-10">
           <Label>Cubits</Label>
           <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-[clamp(3.5rem,14vw,5.5rem)] font-semibold leading-none tracking-tighter">$29</span>
+            <span className="bg-gradient-to-b from-white to-glow bg-clip-text text-[clamp(3.5rem,14vw,5.5rem)] font-semibold leading-none tracking-tighter text-transparent">$29</span>
             <span className="text-mute">/ month per workspace</span>
           </div>
           <p className="mt-3 text-sm text-mute">Or $290 a year. That is two months free.</p>
           <ul className="mt-8 border-t border-line">
             {included.map((i) => (
               <li key={i} className="flex min-h-[44px] items-center gap-3 border-b border-line py-2 text-sm">
-                <span aria-hidden className="text-[8px] text-mute">◼</span>{i}
+                <span aria-hidden className="text-[8px] text-glow">◼</span>{i}
               </li>
             ))}
           </ul>
@@ -59,7 +59,7 @@ export default function Pricing() {
 
       <Section>
         <Label>FAQ</Label>
-        <div className="mb-10 mt-4"><H2>Trial, billing, cancelling.</H2></div>
+        <div className="mb-10 mt-4"><H2>Trial, billing, cancelling. All clear.</H2></div>
         <Faq items={faq} />
       </Section>
 

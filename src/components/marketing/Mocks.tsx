@@ -1,8 +1,8 @@
 function Frame({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-line bg-panel">
+    <div className="overflow-hidden rounded-xl border border-glow/20 bg-panel shadow-[0_0_48px_-20px_rgba(125,211,252,0.45)] transition-shadow duration-300 hover:shadow-[0_0_56px_-14px_rgba(125,211,252,0.6)]">
       <div className="flex items-center gap-1.5 border-b border-line px-4 py-2.5">
-        <span className="h-2 w-2 rounded-full bg-line" />
+        <span className="h-2 w-2 rounded-full bg-glow/70" />
         <span className="h-2 w-2 rounded-full bg-line" />
         <span className="h-2 w-2 rounded-full bg-line" />
         <span className="ml-3 font-mono text-[10px] uppercase tracking-widest text-mute">{title}</span>
