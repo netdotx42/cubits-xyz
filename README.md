@@ -35,7 +35,7 @@ Checks before deploying: `npm run typecheck` and `npm run build`.
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`, `STRIPE_PRICE_ID_ANNUAL` (optional) | Billing |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Transactional email |
 | `CRON_SECRET` | Bearer token protecting `/api/cron/*` |
-| `NEXT_PUBLIC_SUPPORT_EMAIL` | Support and contact address shown on the site (set a real mailbox) |
+| `ADMIN_EMAILS` | Comma-separated emails allowed to read Contact page messages at `/app/admin/messages` (run `supabase/contact.sql` first) |
 
 ## Agents (add-on)
 

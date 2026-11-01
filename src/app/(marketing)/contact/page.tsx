@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { ContactForm } from "@/components/marketing/ContactForm";
 import { Label, Section } from "@/components/marketing/ui";
-import { SUPPORT_EMAIL } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Contact | Cubits", description: "Book a demo, ask a question, read our privacy policy and terms." };
 
@@ -29,7 +28,7 @@ export default function Contact() {
         <div className="mt-6 max-w-2xl space-y-4 text-mute">
           <p>We collect what we need to run your workspace: account details, the content you create in Cubits, and basic usage data to keep the service reliable.</p>
           <p>Your workspace data is yours. We do not sell it and we do not use it for advertising. We use trusted subprocessors for hosting, email delivery and payments.</p>
-          <p>You can export or delete your data at any time. For a DPA or any privacy question, write to {SUPPORT_EMAIL}.</p>
+          <p>You can export or delete your data at any time. For a DPA or any privacy question, send us a message with the form above.</p>
         </div>
       </Section>
 
@@ -39,7 +38,7 @@ export default function Contact() {
         <div className="mt-6 max-w-2xl space-y-4 text-mute">
           <p>Cubits is billed at $29 a month per workspace, or $290 a year. The 7-day free trial requires a card and converts to a paid plan unless cancelled before it ends.</p>
           <p>You can cancel any time. Access continues to the end of the paid period. Automations are limited to about 1,000 runs per workspace per month.</p>
-          <p>You are responsible for the content you send through Cubits and for using it lawfully. We may suspend accounts that abuse the service. Questions: {SUPPORT_EMAIL}.</p>
+          <p>You are responsible for the content you send through Cubits and for using it lawfully. We may suspend accounts that abuse the service. Questions: use the form above.</p>
         </div>
       </Section>
     </>
