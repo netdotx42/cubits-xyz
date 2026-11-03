@@ -8,7 +8,8 @@ Stack: Next.js 15 (App Router) · Tailwind 3 · Supabase (auth + Postgres + RLS)
 ## Setup
 
 1. `npm install`
-2. Create a Supabase project and run `supabase/schema.sql` in the SQL editor.
+2. Create a Supabase project and run, in order, `supabase/schema.sql`, `supabase/agents.sql` and `supabase/audit-fixes.sql` in the SQL editor.
+   All three are idempotent, so re-running them is safe. Existing projects must run `audit-fixes.sql` before deploying this version.
 3. Copy `.env.example` to `.env.local` and fill in every value.
 4. In Stripe, create a Product with a recurring **$29 / month** Price and set `STRIPE_PRICE_ID`.
    (Live account: product `prod_VXzdvoBKoaKSor`, monthly price `price_1UWteY17sTkAsp8v9gmwj9we`, annual $290 price `price_1UWtf917sTkAsp8vzW2uLsht`. Price IDs are not secret.)
@@ -23,7 +24,7 @@ Stack: Next.js 15 (App Router) · Tailwind 3 · Supabase (auth + Postgres + RLS)
 8. In Supabase Auth settings, set the Site URL to `NEXT_PUBLIC_APP_URL` and add `{APP_URL}/auth/callback` as a redirect URL.
 9. `npm run dev`
 
-Checks before deploying: `npm run typecheck` and `npm run build`.
+Checks before deploying: `npm run lint`, `npm run typecheck`, `npm test` and `npm run build` (CI runs all four).
 
 ## Environment variables
 
@@ -34,6 +35,7 @@ Checks before deploying: `npm run typecheck` and `npm run build`.
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only writes (never exposed to the browser) |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`, `STRIPE_PRICE_ID_ANNUAL` (optional) | Billing |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Transactional email |
+| `EMAIL_FROM_TENANT` (optional) | Sender for customer-written mail (automations, agents), ideally on a separate subdomain |
 | `CRON_SECRET` | Bearer token protecting `/api/cron/*` |
 | `ADMIN_EMAILS` | Comma-separated emails allowed to read Contact page messages at `/app/admin/messages` (run `supabase/contact.sql` first) |
 
@@ -42,8 +44,8 @@ Checks before deploying: `npm run typecheck` and `npm run build`.
 Run `supabase/agents.sql` after `schema.sql`. Set `STRIPE_PRICE_ID_AGENTS`, `ANTHROPIC_API_KEY` (and optionally `AGENTS_MODEL`).
 Public API under `/v1` (Bearer `cbk_...` keys): `POST/GET /v1/agents`, `PATCH /v1/agents/{id}`, `POST /v1/agents/{id}/runs` (Idempotency-Key, `?stream=1`),
 `GET /v1/runs/{id}`, `POST /v1/runs/{id}/approve`, `GET /v1/usage`, `POST /v1/webhooks`.
-Limits: 5 steps and 20k tokens per run, 3,000 runs per yearly period, 60 requests/min per key (per-instance, best effort).
-Sensitive tools (send_email) pause the run until a human approves it in the app or via the API.
+Limits: 5 steps, 20k tokens and about 50 seconds per run, 3,000 runs per yearly period, 60 requests/min per key (shared across instances via Postgres).
+Sensitive tools (send_email) pause the run until someone approves it in the app, or via the API with a different key from the one that started the run.
 
 ## Deploy to Vercel
 
@@ -67,13 +69,15 @@ On Netlify or Cloudflare, call the same `/api/cron/*` URLs from a scheduled func
 - **Workspace = paying unit.** `workspaces.plan_status` (`trialing` / `active`) gates every `/app` page via `requireWorkspace()`.
 - **Cubits** live in `src/app/app/*` and are listed in `src/lib/cubits/registry.ts`.
 - **Events:** cubits call `emit(workspaceId, event, payload)` (`src/lib/events.ts`); the automations engine runs matching rules.
-- **RLS** scopes all data by workspace membership; Stripe fields, public form submissions and automation logs are written server-side with the service role.
+- **RLS** scopes all data by workspace membership, and writes also need an active plan (`has_access()`); Stripe fields, public form submissions and automation logs are written server-side with the service role.
+- **Billing guards:** one free trial per product per workspace (checked against Stripe history), no second checkout while a plan is live, and webhooks only update the workspace's current subscription.
+- **Limits:** public forms allow 10 submissions/min per IP and 300/hour per form; each workspace can send 200 automation and agent emails a day. Outbound webhooks are checked against private addresses at connect time.
 
 ## Pages
 
 Marketing (4): `/`, `/pricing`, `/cubits`, `/contact` (Privacy and Terms are sections on the contact page).
-App: `/login`, `/signup`, `/app`, `/app/invoices`, `/app/forms`, `/app/automations`, `/app/team`, `/app/billing`. Public form: `/f/{slug}`.
+App: `/login`, `/signup`, `/app`, `/app/invoices`, `/app/forms`, `/app/automations`, `/app/agents`, `/app/team`, `/app/billing`, `/app/settings`. Public form: `/f/{slug}`.
 
 ## Not in v1
 
-SSO, roles beyond owner/member, audit logs, public API, per-cubit add-ons, retry queues and multi-step automations.
+SSO, roles beyond owner/member, multiple workspaces per account, audit logs, per-cubit add-ons, retry queues and multi-step automations.

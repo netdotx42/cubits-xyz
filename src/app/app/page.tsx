@@ -11,7 +11,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const { workspace } = await requireWorkspace({ allowUnpaid: true });
   const cubitsOn = workspace.plan_status === "trialing" || workspace.plan_status === "active";
   const agentsOn = workspace.agents_status === "trialing" || workspace.agents_status === "active";
-  if (!cubitsOn && !agentsOn && welcome !== "1") redirect("/app/billing");
+  if (!cubitsOn && !agentsOn && !welcome) redirect("/app/billing");
   const visible = cubitsOn ? CUBITS : CUBITS.filter((c) => c.id === "agents");
 
   return (
@@ -19,7 +19,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <PageHeader title={workspace.name} subtitle="Your tools." />
       {welcome && (
         <div className="mb-6 border border-line bg-panel p-4 text-sm">
-          Your 7-day free trial has started. Pick a tool below.
+          {welcome === "back" ? "Welcome back. Your plan is active again." : "Your 7-day free trial has started. Pick a tool below."}
         </div>
       )}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

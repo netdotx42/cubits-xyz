@@ -1,14 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { executeAutomations } from "./engine";
 import type { AutomationRow } from "./types";
-
-type Item = { quantity?: number; qty?: number; unit_price?: number };
-
-function invoiceTotal(items: unknown, taxRate: number): number {
-  const list = Array.isArray(items) ? (items as Item[]) : [];
-  const sub = list.reduce((s, i) => s + (Number(i.qty ?? i.quantity) || 0) * (Number(i.unit_price) || 0), 0);
-  return sub * (1 + (Number(taxRate) || 0) / 100);
-}
+import { calcTotals, type LineItem } from "@/components/cubits/util";
 
 async function summarize(workspaceId: string, since: string) {
   const db = supabaseAdmin();
@@ -19,7 +12,10 @@ async function summarize(workspaceId: string, since: string) {
     db.from("invoices").select("items, tax_rate").eq("workspace_id", workspaceId).eq("kind", "invoice").eq("status", "sent"),
   ]);
   const unpaidTotal = (unpaid.data ?? []).reduce(
-    (s, r) => s + invoiceTotal((r as { items: unknown }).items, (r as { tax_rate: number }).tax_rate),
+    (s, r) => {
+      const row = r as { items: unknown; tax_rate: number };
+      return s + calcTotals(Array.isArray(row.items) ? (row.items as LineItem[]) : [], Number(row.tax_rate)).total;
+    },
     0
   );
   return {

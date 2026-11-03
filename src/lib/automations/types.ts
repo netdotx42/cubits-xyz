@@ -78,8 +78,11 @@ export type AutomationRow = {
 
 export type ActionContext = {
   workspaceId: string;
+  workspaceName?: string;
   event: string;
   payload: Payload;
+  /** Stable id for one automation firing, sent to webhooks so retries can be de-duplicated. */
+  deliveryId?: string;
 };
 
 export const MONTHLY_RUN_CAP = 1000;

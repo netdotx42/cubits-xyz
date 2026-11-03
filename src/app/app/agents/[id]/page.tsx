@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireWorkspace } from "@/lib/workspace";
+import { hasAgentsAccess, requireWorkspace } from "@/lib/workspace";
 import { supabaseServer } from "@/lib/supabase/server";
 import { TOOL_CATALOG } from "@/lib/agents/tools";
 import { PageHeader } from "@/components/app/PageHeader";
@@ -10,11 +10,13 @@ import { archiveAgent, updateAgent } from "../actions";
 import { RunConsole } from "./RunConsole";
 
 export const dynamic = "force-dynamic";
+// Server actions on this page run agents, which can take up to ~50 s.
+export const maxDuration = 60;
 
 export default async function AgentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { workspace } = await requireWorkspace({ allowUnpaid: true });
-  if (!["trialing", "active"].includes(workspace.agents_status)) notFound();
+  if (!hasAgentsAccess(workspace)) notFound();
   const supabase = await supabaseServer();
   const { data: agent } = await supabase.from("agents").select("*").eq("id", id).eq("workspace_id", workspace.id).eq("archived", false).maybeSingle();
   if (!agent) notFound();

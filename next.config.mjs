@@ -1,20 +1,23 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // ESLint is not a build dependency; run it separately if you add it.
+  // Lint runs as its own CI step (npm run lint).
   eslint: { ignoreDuringBuilds: true },
   async headers() {
     const common = [
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+    ];
+    const noFrame = [
+      ...common,
+      { key: "X-Frame-Options", value: "DENY" },
+      { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com https://billing.stripe.com; object-src 'none'" },
     ];
     return [
-      // The signed-in app and auth pages must never be framed.
-      { source: "/app/:path*", headers: [...common, { key: "X-Frame-Options", value: "DENY" }] },
-      { source: "/login", headers: [...common, { key: "X-Frame-Options", value: "DENY" }] },
-      { source: "/signup", headers: [...common, { key: "X-Frame-Options", value: "DENY" }] },
-      // Marketing and public form pages (/f/*) stay embeddable.
-      { source: "/((?!app|login|signup).*)", headers: common },
+      // Only public form pages (/f/*) are meant to be embedded on customers' sites.
+      { source: "/f/:path*", headers: [...common, { key: "Content-Security-Policy", value: "base-uri 'self'; object-src 'none'" }] },
+      { source: "/((?!f/).*)", headers: noFrame },
     ];
   },
 };

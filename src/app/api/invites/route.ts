@@ -3,6 +3,8 @@ import { z } from "zod";
 import { requireWorkspace } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
+import { APP_URL } from "@/lib/stripe";
+import { escapeHtml } from "@/components/cubits/util";
 
 export const runtime = "nodejs";
 
@@ -10,10 +12,6 @@ const Body = z.object({ email: z.string().trim().toLowerCase().email().max(254) 
 
 function back(req: Request, msg: string) {
   return NextResponse.redirect(new URL(`/app/team?msg=${msg}`, req.url), 303);
-}
-
-function esc(s: string) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 export async function POST(req: Request) {
@@ -29,26 +27,28 @@ export async function POST(req: Request) {
   const email = parsed.data.email;
 
   const admin = supabaseAdmin();
+  const now = new Date().toISOString();
   const [{ count: memberCount }, { count: inviteCount }] = await Promise.all([
     admin.from("members").select("user_id", { count: "exact", head: true }).eq("workspace_id", workspace.id),
-    admin.from("invites").select("id", { count: "exact", head: true }).eq("workspace_id", workspace.id).is("accepted_at", null),
+    // Expired invites no longer hold a seat.
+    admin.from("invites").select("id", { count: "exact", head: true }).eq("workspace_id", workspace.id).is("accepted_at", null).gt("expires_at", now),
   ]);
   if ((memberCount ?? 0) + (inviteCount ?? 0) >= workspace.seats) return back(req, "full");
 
   const { data: pending } = await admin
-    .from("invites").select("id").eq("workspace_id", workspace.id).eq("email", email).is("accepted_at", null).maybeSingle();
+    .from("invites").select("id").eq("workspace_id", workspace.id).eq("email", email).is("accepted_at", null).gt("expires_at", now).limit(1).maybeSingle();
   if (pending) return back(req, "exists");
 
   const { data: invite, error } = await admin
     .from("invites").insert({ workspace_id: workspace.id, email }).select("token").single();
   if (error || !invite) return back(req, "failed");
 
-  const link = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${invite.token}`;
+  const link = `${APP_URL()}/invite/${invite.token}`;
   try {
     await sendEmail({
       to: email,
       subject: `Join ${workspace.name} on Cubits`,
-      html: `<p>You have been invited to join ${esc(workspace.name)} on Cubits.</p><p><a href="${link}">Accept the invite</a></p><p>Or copy this link: ${link}</p>`,
+      html: `<p>You have been invited to join ${escapeHtml(workspace.name)} on Cubits.</p><p><a href="${link}">Accept the invite</a></p><p>Or copy this link: ${link}</p><p>The link expires in 7 days.</p>`,
     });
   } catch (e) {
     console.error("invite email failed", userId, e);

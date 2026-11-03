@@ -15,7 +15,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const parsed = body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return json({ error: "Body must be { input: string }." }, 400);
   const args = {
-    workspaceId: auth.workspaceId, agentId: id, input: parsed.data.input, source: "api" as const,
+    workspaceId: auth.workspaceId, agentId: id, input: parsed.data.input, source: "api" as const, apiKeyId: auth.keyId,
     idempotencyKey: req.headers.get("idempotency-key")?.slice(0, 100) ?? null,
   };
 

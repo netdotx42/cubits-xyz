@@ -5,6 +5,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import CopyButton from "@/components/cubits/CopyButton";
 import { btnGhost, labelCls } from "@/components/cubits/util";
 import type { FormField } from "@/components/cubits/forms";
+import { APP_URL } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export default async function FormDetailPage({ params }: { params: Promise<{ id:
     .limit(200);
 
   const fields = (form.fields ?? []) as FormField[];
-  const base = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
+  const base = APP_URL();
   const link = `${base}/f/${form.slug}`;
   const embed = `<iframe src="${link}" width="100%" height="520" style="border:0" title="${form.name.replace(/"/g, "&quot;")}"></iframe>`;
 

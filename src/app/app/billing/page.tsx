@@ -13,15 +13,23 @@ const LABELS: Record<string, string> = {
   canceled: "Canceled",
 };
 
-export default async function BillingPage() {
+const NOTICES: Record<string, string> = {
+  subscribed: "This workspace already has a plan. Use Manage billing to change or cancel it.",
+};
+
+export default async function BillingPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
   const { workspace, role } = await requireWorkspace({ allowUnpaid: true });
+  const { msg } = await searchParams;
   const { data } = await supabaseAdmin().from("workspaces").select("stripe_customer_id").eq("id", workspace.id).single();
   const hasCustomer = Boolean(data?.stripe_customer_id);
   const subscribed = workspace.plan_status === "trialing" || workspace.plan_status === "active" || workspace.plan_status === "past_due";
+  // The trial is one per workspace; checkout skips it for returning customers.
+  const returning = workspace.plan_status === "canceled";
 
   return (
     <>
       <PageHeader title="Billing" subtitle="One plan. One price per workspace." />
+      {msg && NOTICES[msg] && <div className="mb-6 border border-line bg-panel p-4 text-sm">{NOTICES[msg]}</div>}
       {workspace.plan_status === "trialing" && (
         <div className="mb-4"><DaysLeftMeter ws={workspace} /></div>
       )}
@@ -32,7 +40,7 @@ export default async function BillingPage() {
           <ul className="mt-4 space-y-2 text-sm text-mute">
             <li>Flat price for the whole workspace.</li>
             <li>Or $290 a year: two months free.</li>
-            <li>7 days free. Card required, cancel any time.</li>
+            <li>7 days free for new workspaces. Card required, cancel any time.</li>
             <li>Up to 5 seats.</li>
             <li>All tools included.</li>
           </ul>
@@ -54,7 +62,7 @@ export default async function BillingPage() {
                 {!subscribed && (
                   <form action="/api/stripe/checkout" method="post" className="space-y-3">
                     <Button type="submit" name="interval" value="monthly" className="w-full">
-                      Start 7-day free trial · $29 / month
+                      {returning ? "Resubscribe · $29 / month" : "Start 7-day free trial · $29 / month"}
                     </Button>
                     {process.env.STRIPE_PRICE_ID_ANNUAL && (
                       <Button type="submit" name="interval" value="annual" variant="ghost" className="w-full">

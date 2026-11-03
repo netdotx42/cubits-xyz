@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireWorkspace } from "@/lib/workspace";
+import { hasAgentsAccess, requireWorkspace } from "@/lib/workspace";
 import { supabaseServer } from "@/lib/supabase/server";
 import { usageThisPeriod } from "@/lib/agents/runner";
 import { TOOL_CATALOG } from "@/lib/agents/tools";
@@ -10,11 +10,13 @@ import { KeyPanel } from "./KeyPanel";
 import { createAgent, decideRun } from "./actions";
 
 export const dynamic = "force-dynamic";
+// Server actions on this page run agents, which can take up to ~50 s.
+export const maxDuration = 60;
 
 export default async function AgentsPage() {
   const { workspace, role } = await requireWorkspace({ allowUnpaid: true });
 
-  if (!["trialing", "active"].includes(workspace.agents_status)) {
+  if (!hasAgentsAccess(workspace)) {
     return (
       <>
         <PageHeader title="Agents" subtitle="AI agents you can run from the app or your own code." />
@@ -24,11 +26,11 @@ export default async function AgentsPage() {
             <li>3,000 agent runs a year, 5 seats</li>
             <li>REST API with keys, webhooks and streaming</li>
             <li>Tools: send email (with approval), invoice drafts, read leads</li>
-            <li>Spend caps on every run. 7-day free trial.</li>
+            <li>Spend caps on every run. 7-day free trial for new subscribers.</li>
           </ul>
           {role === "owner" ? (
             <form action="/api/stripe/agents-checkout" method="post" className="mt-5">
-              <button className={btnPrimary}>Start 7-day free trial</button>
+              <button className={btnPrimary}>{workspace.agents_status === "canceled" ? "Resubscribe" : "Start 7-day free trial"}</button>
             </form>
           ) : (
             <p className="mt-5 text-sm text-mute">Ask the workspace owner to enable Agents.</p>

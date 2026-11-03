@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/app/PageHeader";
 import { Card } from "@/components/app/Card";
 import { Input } from "@/components/app/Input";
 import { Button } from "@/components/app/Button";
+import { removeMember, revokeInvite } from "./actions";
 
 const MESSAGES: Record<string, string> = {
   sent: "Invite sent.",
@@ -12,6 +13,9 @@ const MESSAGES: Record<string, string> = {
   forbidden: "Only the owner can invite people.",
   exists: "That person is already in this workspace.",
   failed: "Could not send the invite. Try again.",
+  removed: "Member removed.",
+  revoked: "Invite revoked.",
+  owner: "The owner cannot be removed.",
 };
 
 export default async function TeamPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
@@ -21,7 +25,8 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
 
   const [{ data: members }, { data: invites }] = await Promise.all([
     admin.from("members").select("user_id, role, created_at").eq("workspace_id", workspace.id).order("created_at"),
-    admin.from("invites").select("id, email, created_at").eq("workspace_id", workspace.id).is("accepted_at", null).order("created_at"),
+    admin.from("invites").select("id, email, created_at, expires_at").eq("workspace_id", workspace.id).is("accepted_at", null)
+      .gt("expires_at", new Date().toISOString()).order("created_at"),
   ]);
 
   const rows = await Promise.all(
@@ -45,7 +50,14 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
           {rows.map((m) => (
             <li key={m.user_id} className="flex items-center justify-between gap-3 py-3 text-sm">
               <span className="min-w-0 truncate">{m.email}</span>
-              <span className="shrink-0 font-mono text-[11px] uppercase tracking-widest text-mute">{m.role}</span>
+              <span className="flex shrink-0 items-center gap-3">
+                <span className="font-mono text-[11px] uppercase tracking-widest text-mute">{m.role}</span>
+                {role === "owner" && m.role !== "owner" && (
+                  <form action={removeMember.bind(null, m.user_id)}>
+                    <button className="min-h-[44px] font-mono text-[11px] uppercase tracking-widest text-mute underline hover:text-paper">Remove</button>
+                  </form>
+                )}
+              </span>
             </li>
           ))}
         </ul>
@@ -56,7 +68,17 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
           <p className="mb-3 font-mono text-[11px] uppercase tracking-widest text-mute">Pending invites</p>
           <ul className="divide-y divide-line">
             {invites!.map((i) => (
-              <li key={i.id} className="py-3 text-sm"><span className="block truncate">{i.email}</span></li>
+              <li key={i.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                <span className="min-w-0 truncate">{i.email}</span>
+                <span className="flex shrink-0 items-center gap-3">
+                  <span className="font-mono text-[11px] text-mute">expires {new Date(i.expires_at).toLocaleDateString("en-US")}</span>
+                  {role === "owner" && (
+                    <form action={revokeInvite.bind(null, i.id)}>
+                      <button className="min-h-[44px] font-mono text-[11px] uppercase tracking-widest text-mute underline hover:text-paper">Revoke</button>
+                    </form>
+                  )}
+                </span>
+              </li>
             ))}
           </ul>
         </Card>

@@ -1,5 +1,7 @@
 import { createHash, randomBytes } from "crypto";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { allow } from "@/lib/rate-limit";
+import { isOn } from "@/lib/access";
 
 export const hashKey = (key: string) => createHash("sha256").update(key).digest("hex");
 
@@ -9,8 +11,6 @@ export function generateKey() {
   return { key, prefix: key.slice(0, 11), hash: hashKey(key) };
 }
 
-// Best-effort per-instance limiter (resets on cold start). Real limits need Redis/KV later.
-const buckets = new Map<string, { n: number; reset: number }>();
 const LIMIT_PER_MIN = 60;
 
 export type ApiAuth = { workspaceId: string; keyId: string };
@@ -28,13 +28,11 @@ export async function authenticate(req: Request): Promise<ApiAuth | Response> {
     .maybeSingle();
   if (!row || row.revoked_at) return json({ error: "Invalid API key." }, 401);
 
-  const now = Date.now();
-  const b = buckets.get(row.id);
-  if (!b || b.reset < now) buckets.set(row.id, { n: 1, reset: now + 60_000 });
-  else if (++b.n > LIMIT_PER_MIN) return json({ error: "Rate limit exceeded (60 requests/minute)." }, 429);
+  // Shared across instances (see rate_limit_hit in supabase/audit-fixes.sql).
+  if (!(await allow(`key:${row.id}`, LIMIT_PER_MIN, 60))) return json({ error: "Rate limit exceeded (60 requests/minute)." }, 429);
 
   const { data: ws } = await admin.from("workspaces").select("agents_status").eq("id", row.workspace_id).single();
-  if (!ws || !["trialing", "active"].includes(ws.agents_status)) {
+  if (!ws || !isOn(ws.agents_status)) {
     return json({ error: "Agents plan is not active for this workspace." }, 402);
   }
   void admin.from("api_keys").update({ last_used_at: new Date().toISOString() }).eq("id", row.id).then(() => {});
